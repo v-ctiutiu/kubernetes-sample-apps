@@ -1,19 +1,99 @@
+#########################################################################
+#
+#   Default project values - change as needed.
+#
+#########################################################################
+
 ENVIRONMENT = "dev"
-os.putenv("DOCKER_DEFAULT_PLATFORM", "linux/amd64")
-DOCKER_REGISTRY = "registry.digitalocean.com/microservices-demo"
+DEFAULT_CLUSTER_NAME = "microservices-demo-dev"
+DEFAULT_REGION = "nyc1"
+DEFAULT_DOCR_ENDPOINT = "registry.digitalocean.com/microservices-demo"
+DEFAULT_K8S_NAMESPACE = "microservices-demo-dev"
+#########################################################################
 
-allow_k8s_contexts("<YOUR_REMOTE_DEV_CLUSTER_CONTEXT_HERE>")
 
-docker_build(DOCKER_REGISTRY + "/cartservice", "src/cartservice/src")
-docker_build(DOCKER_REGISTRY + "/checkoutservice", "src/checkoutservice")
-docker_build(DOCKER_REGISTRY + "/currencyservice", "src/currencyservice")
-docker_build(DOCKER_REGISTRY + "/emailservice", "src/emailservice")
-docker_build(DOCKER_REGISTRY + "/frontend", "src/frontend")
-docker_build(DOCKER_REGISTRY + "/paymentservice", "src/paymentservice")
-docker_build(DOCKER_REGISTRY + "/productcatalogservice", "src/productcatalogservice")
-docker_build(DOCKER_REGISTRY + "/recommendationservice", "src/recommendationservice")
-docker_build(DOCKER_REGISTRY + "/shippingservice", "src/shippingservice")
+#########################################################################
+#
+#   Tiltfile logic - touch following lines only if required!
+#
+#########################################################################
 
-k8s_yaml(kustomize("kustomize/" + ENVIRONMENT))
 
+# If set, following env vars override the default values (useful for CI)
+#
+# - CLUSTER_NAME
+# - REGION
+# - DOCR_ENDPOINT
+# - K8S_CONTEXT
+# - K8S_NAMESPACE
+
+# Overrides default cluster name if CLUSTER_NAME env var is set
+CLUSTER_NAME = os.getenv(
+    "CLUSTER_NAME", 
+    default=DEFAULT_CLUSTER_NAME
+)
+
+# Overrides default cluster region if REGION env var is set
+REGION = os.getenv(
+    "REGION", 
+    default=DEFAULT_REGION
+)
+
+# Overrides default DOCR endpoint if DOCR_ENDPOINT env var is set
+DOCR_ENDPOINT= os.getenv(
+    "DOCR_ENDPOINT", 
+    default=DEFAULT_DOCR_ENDPOINT
+)
+
+# Overrides default Kubernetes context if K8S_CONTEXT env var is set
+K8S_CONTEXT = os.getenv(
+    "K8S_CONTEXT",
+    default="do-{}-{}".format(REGION, CLUSTER_NAME)
+)
+
+# Overrides default Kubernetes namespace for the app if K8S_NAMESPACE env var is set
+K8S_NAMESPACE = os.getenv(
+    "K8S_NAMESPACE",
+    default=DEFAULT_K8S_NAMESPACE
+)
+
+
+# Import common functions
+load(
+    "./Tiltfile-common", 
+    "build_project_images",
+    "create_k8s_namespace",
+    "kustomize_project_images",
+    "kustomize_project_namespace",
+)
+
+# Allow default K8S context
+allow_k8s_contexts(K8S_CONTEXT)
+
+# Build Docker images for project microservices
+# Full list of services is stored in Titlfile-common
+build_project_images(registry=DOCR_ENDPOINT)
+
+# Creates project namespace where to deploy microservices
+create_k8s_namespace(name=K8S_NAMESPACE)
+
+# Sets project K8S namespace via Kustomize
+kustomize_project_namespace(
+    name=K8S_NAMESPACE,
+    dir_ctx="kustomize/{}".format(ENVIRONMENT)
+)
+
+# Sets project images for K8S Deployments via Kustomize
+kustomize_project_images( 
+    registry=DOCR_ENDPOINT,
+    tag="latest",
+    dir_ctx="kustomize/{}".format(ENVIRONMENT)
+)
+
+# Apply env specific kustomizations
+k8s_yaml(
+    kustomize("kustomize/{}".format(ENVIRONMENT))
+)
+
+# Port forward frontend service
 k8s_resource("frontend", port_forwards="9090")

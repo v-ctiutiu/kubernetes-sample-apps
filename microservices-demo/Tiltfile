@@ -1,18 +1,37 @@
+#########################################################################
+#
+#   Default project values - change as needed.
+#
+#########################################################################
+
 ENVIRONMENT = "local"
-os.putenv("DOCKER_DEFAULT_PLATFORM", "linux/amd64")
+DEFAULT_K8S_CONTEXT = "docker-desktop"
+#########################################################################
 
-allow_k8s_contexts("docker-desktop")
 
-docker_build("cartservice", "src/cartservice/src")
-docker_build("checkoutservice", "src/checkoutservice")
-docker_build("currencyservice", "src/currencyservice")
-docker_build("emailservice", "src/emailservice")
-docker_build("frontend", "src/frontend")
-docker_build("paymentservice", "src/paymentservice")
-docker_build("productcatalogservice", "src/productcatalogservice")
-docker_build("recommendationservice", "src/recommendationservice")
-docker_build("shippingservice", "src/shippingservice")
+#########################################################################
+#
+#   Tiltfile logic - touch following lines only if required!
+#
+#########################################################################
 
-k8s_yaml(kustomize("kustomize/" + ENVIRONMENT))
 
-k8s_resource("frontend", port_forwards="9000")
+# Import common functions
+load(
+    "./Tiltfile-common", 
+    "build_project_images"
+)
+
+# Allow default K8S context
+allow_k8s_contexts(DEFAULT_K8S_CONTEXT)
+
+# Build Docker images for project microservices
+# Full list of services is stored in Titlfile-common
+# Local env doesn't need a remote registry, hence it's empty
+build_project_images(registry="")
+
+# Apply env specific kustomizations
+k8s_yaml(kustomize("kustomize/{}".format(ENVIRONMENT)))
+
+# Port forward frontend service
+k8s_resource("frontend", port_forwards="9090")

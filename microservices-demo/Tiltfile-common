@@ -1,0 +1,67 @@
+# Project microservices list
+
+PROJECT_MICROSERVICES = [
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "frontend",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "shippingservice",
+]
+
+
+# Builds project docker images for each microservice
+# Arguments:
+#   registry (string) - Docker registry endpoint
+
+def build_project_images(registry):
+    for microservice in PROJECT_MICROSERVICES:
+        docker_build(
+            "{}/{}".format(registry, microservice),
+            "src/{}/src".format(microservice) if "cartservice" in microservice else "src/{}".format(microservice)
+        )
+
+# Provisions a new Kubernetes namespace
+# Arguments
+#   name (string) - Name of the Kubernetes namespace
+
+def create_k8s_namespace(name):
+    k8s_yaml(
+        blob(
+            """
+            apiVersion: v1
+            kind: Namespace
+            metadata:
+                name: {}
+            """.format(name)
+        )
+    )
+
+# Kustomize project images using specified registry and tag
+# Arguments
+#   registry (string)   - Docker registry endpoint
+#   tag (string)        - Docker image tag to use
+#   dir_ctx (string)    - kustomization.yaml dir path
+#
+# TO DO - All images use the same tag name. What about individual tagging ?
+
+def kustomize_project_images(registry, tag, dir_ctx):
+    for microservice in PROJECT_MICROSERVICES:
+        local(
+            command="kustomize edit set image {}={}/{}:{}".format(microservice, registry, microservice, tag),
+            dir=dir_ctx
+        )
+
+# Kustomize project namespace
+# Arguments
+#   name (string)       - Name of the Kubernetes namespace
+#   dir_ctx (string)    - kustomization.yaml dir path
+
+def kustomize_project_namespace(name, dir_ctx):
+    local(
+        command="kustomize edit set namespace {}".format(name),
+        dir=dir_ctx
+    )
