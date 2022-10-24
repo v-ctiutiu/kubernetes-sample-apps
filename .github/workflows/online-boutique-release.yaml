@@ -52,7 +52,7 @@ jobs:
           # cartservice is an exception - Dockerfile is placed in src/cartservice/src subfolder
           context: "src/${{ matrix.project }}/${{ matrix.project == 'cartservice' && 'src' || ''}}"
           push: true
-          tags: "${{ env.DOCR_ENDPOINT }}/${{ matrix.project }}:${{ github.ref }}"
+          tags: "${{ env.DOCR_ENDPOINT }}/${{ matrix.project }}:${{ github.ref_name }}"
 
   # Kustomize image field for each microservice present in the `src/` dir
   # Finally, commit changes to main branch and let ArgoCD take over afterwards
@@ -77,7 +77,7 @@ jobs:
             fi
             (
               cd kustomize/staging/
-              kustomize edit set image $microservice=${{ env.DOCR_ENDPOINT }}/${microservice}:${{ github.ref }}
+              kustomize edit set image $microservice=${{ env.DOCR_ENDPOINT }}/${microservice}:${{ github.ref_name }}
             )
           done
 
@@ -86,7 +86,7 @@ jobs:
           git config --global user.name "${{ env.RELEASE_COMMIT_AUTHOR }}"
           git config --global user.email "${{ env.RELEASE_COMMIT_AUTHOR_EMAIL }}"
           git add kustomize/staging/
-          git commit -m "[Release] Bump docker images tag to ${{ github.ref }}"
+          git commit -m "[Release] Bump docker images tag to ${{ github.ref_name }}"
 
       - name: Push changes
         uses: ad-m/github-push-action@master
