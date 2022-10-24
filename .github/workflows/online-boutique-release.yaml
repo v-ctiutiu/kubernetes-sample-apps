@@ -10,7 +10,7 @@ on:
 env:
   RELEASE_COMMIT_AUTHOR: "GitHub Release Actions"
   RELEASE_COMMIT_AUTHOR_EMAIL: "gh-release-actions@noreply.github.com"
-  DOCR_ENDPOINT: "registry.digitalocean.com/microservices-demo"
+  DOCR_ENDPOINT: "registry.digitalocean.com/microservices-test"
   PROJECT_NAME: "online-boutique"
 
 jobs:
